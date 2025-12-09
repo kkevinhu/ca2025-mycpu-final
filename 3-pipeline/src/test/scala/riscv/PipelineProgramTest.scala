@@ -25,6 +25,23 @@ class PipelineProgramTest extends AnyFlatSpec with ChiselScalatestTester {
   for (cfg <- PipelineConfigs.All) {
     behavior.of(cfg.name)
 
+    /*it should "do sqrt" in {
+      runProgram("sqrt.asmbin", cfg) { c =>
+        c.clock.setTimeout(0)
+        for (i <- 1 to 1000) {
+          c.clock.step(1)
+          c.io.mem_debug_read_address.poke((i * 4).U)
+          c.io.regs_debug_read_address.poke(10.U)
+          println(c.io.regs_debug_read_data.peek())
+        }
+        //c.io.regs_debug_read_address.poke(10.U)
+        //c.io.regs_debug_read_data.expect(0x42c0.U)
+        c.clock.step(750)
+        c.io.regs_debug_read_address.poke(10.U)
+        c.io.regs_debug_read_data.expect(0x3dd1.U)
+      }
+    }*/
+
     it should "calculate recursively fibonacci(10)" in {
       runProgram("fibonacci.asmbin", cfg) { c =>
         for (i <- 1 to 50) {

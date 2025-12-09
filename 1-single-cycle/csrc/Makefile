@@ -24,7 +24,8 @@ OBJCOPY := $(CROSS_COMPILE)objcopy
 BINS = \
 	fibonacci.asmbin \
 	quicksort.asmbin \
-	sb.asmbin
+	sb.asmbin \
+	sqrt.asmbin
 
 # Clear the .DEFAULT_GOAL special variable, so that the following turns
 # to the first target after .DEFAULT_GOAL is not set.

@@ -114,3 +114,22 @@ class ByteAccessTest extends AnyFlatSpec with ChiselScalatestTester {
     }
   }
 }
+
+/*class SqrtTest extends AnyFlatSpec with ChiselScalatestTester {
+  behavior.of("Single Cycle CPU - Integration Tests")
+  it should "do sqrt" in {
+    test(new TestTopModule("sqrt.asmbin")).withAnnotations(TestAnnotations.annos) { c =>
+      for (i <- 1 to 50) {
+        c.clock.step(1)
+        c.io.mem_debug_read_address.poke((i * 4).U) // Avoid timeout
+        println(c.io.mem_debug_read_address.peek())
+        println(c.io.mem_debug_read_data.peek())
+      }
+      c.io.regs_debug_read_address.poke(10.U)
+      c.io.regs_debug_read_data.expect(0x42c0.U)
+      c.io.regs_debug_read_address.poke(10.U)
+      c.clock.step(1000)
+      c.io.regs_debug_read_data.expect(0x3dd1.U)
+    }
+  }
+}*/
