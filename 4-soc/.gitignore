@@ -1,7 +1,8 @@
 # Generated files
 csrc/nyancat-data.h
 
-# Build artifacts
+# Build artifacts (generated Verilog)
+# Note: verilog/verilator/sim.cpp and vga_display.h tracked via git add -f
 verilog/
 target/
 *.class

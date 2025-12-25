@@ -10,7 +10,7 @@ val chiselVersion = "3.6.1"
 
 // Root aggregate project
 lazy val root = (project in file("."))
-  .aggregate(common, minimal, singleCycle, mmioTrap, pipeline)
+  .aggregate(common, minimal, singleCycle, mmioTrap, pipeline, soc)
   .settings(
     name := "mycpu-root"
   )
@@ -121,6 +121,12 @@ lazy val pipeline = (project in file("3-pipeline"))
     Test / javaOptions += s"-Duser.dir=${(ThisBuild / baseDirectory).value}/3-pipeline",
   )
 
+// 4-soc: System-on-Chip with AXI4-Lite bus, VGA, UART, and branch prediction
+// Complete implementation without exercises - extends pipelined core with:
+// - AXI4-Lite bus protocol for standardized peripheral access
+// - VGA controller with 640x480@72Hz output and double-buffered framebuffer
+// - UART controller with TX/RX buffering at 115200 baud
+// - Branch prediction: BTB (32-entry) + RAS (4-entry) + IndirectBTB (8-entry)
 lazy val soc = (project in file("4-soc"))
   .settings(
     name := "mycpu-soc",
