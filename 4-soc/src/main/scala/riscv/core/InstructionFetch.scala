@@ -222,7 +222,8 @@ class InstructionFetch extends Module {
   //    - Perceptron provides direction prediction (taken/not-taken)
   //    - BTB provides target address (only needs valid entry, not direction)
   //    - Only predict taken if: perceptron says taken AND BTB has valid target
-  val perceptron_btb_taken = btb.io.predicted_taken // Debug: BTB only
+  // Perceptron direction + BTB target (only predict taken if both agree on valid target and direction)
+  val perceptron_btb_taken = perceptron.io.predicted_taken && btb.io.hit
   val default_next_pc = Mux(
     ras_prediction_valid,
     ras.io.predicted_addr, // RAS prediction for returns

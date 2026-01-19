@@ -82,7 +82,7 @@ class BranchTargetBuffer(entries: Int = 16) extends Module {
   val predict_taken = hit && (counters(pred_index) >= 2.U)
   io.predicted_taken := predict_taken
   // Output target address when BTB hits; external predictor decides direction
-  io.predicted_pc := Mux(predict_taken, targets(pred_index), io.pc + 4.U)
+  io.predicted_pc := Mux(hit, targets(pred_index), io.pc + 4.U)
 
   // Update logic (registered - takes effect next cycle)
   when(io.update_valid) {
