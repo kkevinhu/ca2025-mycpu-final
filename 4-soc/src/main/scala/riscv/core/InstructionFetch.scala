@@ -112,6 +112,12 @@ class InstructionFetch extends Module {
     val ibtb_update_pc       = Input(UInt(Parameters.AddrWidth))
     val ibtb_update_rs1_hash = Input(UInt(8.W))
     val ibtb_update_target   = Input(UInt(Parameters.AddrWidth))
+
+    // Perceptron predictor output and update interface
+    val perceptron_predicted_taken = Output(Bool())
+    val perceptron_update_valid    = Input(Bool())
+    val perceptron_update_pc       = Input(UInt(Parameters.AddrWidth))
+    val perceptron_update_taken    = Input(Bool())
   })
   val pc = RegInit(ProgramCounter.EntryAddress)
 
@@ -131,6 +137,10 @@ class InstructionFetch extends Module {
   // Handles function pointers, vtables, computed jumps that RAS doesn't cover
   val ibtb = Module(new IndirectBTB(entries = 8))
   ibtb.io.pc := pc
+
+  // Perceptron Branch Predictor for conditional branches
+  val perceptron = Module(new PerceptronBranchPredictor())
+  perceptron.io.pc := pc
 
   // Detect JALR with rs1=ra (x1) or rs1=t0 (x5) in fetched instruction for speculative pop
   // JALR opcode = 0b1100111, rs1 is bits [19:15], rd is bits [11:7]
@@ -164,6 +174,9 @@ class InstructionFetch extends Module {
   // IndirectBTB prediction output (for ID stage to detect misprediction)
   io.ibtb_predicted_valid  := ibtb_prediction_hit
   io.ibtb_predicted_target := ibtb.io.predicted_target
+
+  // Perceptron prediction output (for ID stage to detect misprediction)
+  io.perceptron_predicted_taken := perceptron.io.predicted_taken
 
   // Latch jump request when stall is active
   // Problem: When mem_stall releases, PipelineRegister's combinational bypass
@@ -201,18 +214,22 @@ class InstructionFetch extends Module {
   // RAS prediction: use RAS target for returns when valid
   val ras_prediction_valid = io.ras_predicted_valid
 
-  // Default PC selection: RAS > IndirectBTB > BTB > sequential
+  // Default PC selection: RAS > IndirectBTB > Perceptron+BTB > sequential
   // Priority for JALR instructions:
   // 1. RAS prediction for returns (highest accuracy for call/return patterns)
   // 2. IndirectBTB for other JALR (function pointers, computed jumps)
-  // 3. BTB (fallback, less accurate for JALR but may have stale entry)
+  // 3. Perceptron + BTB for conditional branches:
+  //    - Perceptron provides direction prediction (taken/not-taken)
+  //    - BTB provides target address (only needs valid entry, not direction)
+  //    - Only predict taken if: perceptron says taken AND BTB has valid target
+  val perceptron_btb_taken = btb.io.predicted_taken // Debug: BTB only
   val default_next_pc = Mux(
     ras_prediction_valid,
     ras.io.predicted_addr, // RAS prediction for returns
     Mux(
       ibtb_prediction_hit,
-      ibtb.io.predicted_target,                          // IndirectBTB prediction for non-return JALR
-      Mux(btb.io.predicted_taken, btb_next_pc, pc + 4.U) // BTB prediction or sequential
+      ibtb.io.predicted_target,                        // IndirectBTB prediction for non-return JALR
+      Mux(perceptron_btb_taken, btb_next_pc, pc + 4.U) // Perceptron direction + BTB target
     )
   )
 
@@ -249,4 +266,9 @@ class InstructionFetch extends Module {
   ibtb.io.update_pc       := io.ibtb_update_pc
   ibtb.io.update_rs1_hash := io.ibtb_update_rs1_hash
   ibtb.io.update_target   := io.ibtb_update_target
+
+  // Perceptron update interface - connect external update signals
+  perceptron.io.update_valid := io.perceptron_update_valid
+  perceptron.io.update_pc    := io.perceptron_update_pc
+  perceptron.io.update_taken := io.perceptron_update_taken
 }

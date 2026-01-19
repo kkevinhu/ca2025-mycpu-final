@@ -48,6 +48,7 @@ class BranchTargetBuffer(entries: Int = 16) extends Module {
     val pc              = Input(UInt(Parameters.AddrWidth))
     val predicted_pc    = Output(UInt(Parameters.AddrWidth))
     val predicted_taken = Output(Bool())
+    val hit             = Output(Bool()) // BTB hit (valid entry exists)
 
     // Update interface (ID stage) - registered update
     val update_valid  = Input(Bool())
@@ -74,10 +75,13 @@ class BranchTargetBuffer(entries: Int = 16) extends Module {
   val pred_tag   = getTag(io.pc)
   val hit        = valid(pred_index) && (tags(pred_index) === pred_tag)
 
+  // Expose hit signal for external predictors (e.g., Perceptron)
+  io.hit := hit
+
   // Predict taken only if BTB hit AND counter indicates taken (>= 2)
   val predict_taken = hit && (counters(pred_index) >= 2.U)
   io.predicted_taken := predict_taken
-  // Only redirect to target when predicting taken; otherwise fall through to pc+4
+  // Output target address when BTB hits; external predictor decides direction
   io.predicted_pc := Mux(predict_taken, targets(pred_index), io.pc + 4.U)
 
   // Update logic (registered - takes effect next cycle)

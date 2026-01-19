@@ -1,4 +1,4 @@
-CROSS_COMPILE ?= $(HOME)/rv/toolchain/bin/riscv-none-elf-
+CROSS_COMPILE ?= $(HOME)/Library/xPacks/@xpack-dev-tools/riscv-none-elf-gcc/15.2.0-1.1/.content/bin/riscv-none-elf-
 
 ASFLAGS = -march=rv32i_zicsr -mabi=ilp32
 # Optimization required: -O2 produces large stack frames that overflow in deep call chains
@@ -10,33 +10,51 @@ AS := $(CROSS_COMPILE)as
 CC := $(CROSS_COMPILE)gcc
 LD := $(CROSS_COMPILE)ld
 OBJCOPY := $(CROSS_COMPILE)objcopy
+OBJDUMP := $(CROSS_COMPILE)objdump
 
 # Program targets (add new programs here)
-PROGRAMS := nyancat uart shell
+PROGRAMS := nyancat uart shell fibonacci bubblesort
 BINARIES := $(PROGRAMS:%=%.asmbin)
+DUMPS := $(PROGRAMS:%=%.dump)
 
 %.asmbin: %.elf
 	$(OBJCOPY) -O binary -j .text -j .data $< $@
+
+%.dump: %.elf
+	$(OBJDUMP) -D $< > $@
 
 .DEFAULT_GOAL := all
 
 all: $(BINARIES)
 
+dump: $(DUMPS)
+
 # All programs use proper init.S with ABI compliance and .bss clearing
-nyancat.asmbin: nyancat.c nyancat-data.h init.o link.lds
+# All programs use proper init.S with ABI compliance and .bss clearing
+nyancat.elf: nyancat.c nyancat-data.h init.o link.lds
 	$(CC) $(CFLAGS) -DNYANCAT_COMPRESSION_DELTA=$(NYANCAT_COMPRESSION_DELTA) -c -o nyancat.o nyancat.c
 	$(CROSS_COMPILE)ld -o nyancat.elf -T link.lds $(LDFLAGS) nyancat.o init.o
-	$(OBJCOPY) -O binary -j .text -j .data nyancat.elf $@
 
-uart.asmbin: uart.c mmio.h init.o link.lds
+uart.elf: uart.c mmio.h init.o link.lds
 	$(CC) $(CFLAGS) -c -o uart.o uart.c
 	$(CROSS_COMPILE)ld -o uart.elf -T link.lds $(LDFLAGS) uart.o init.o
-	$(OBJCOPY) -O binary -j .text -j .data uart.elf $@
 
-shell.asmbin: shell.c mmio.h init.o link.lds
+shell.elf: shell.c mmio.h init.o link.lds
 	$(CC) $(CFLAGS) -c -o shell.o shell.c
 	$(CROSS_COMPILE)ld -o shell.elf -T link.lds $(LDFLAGS) shell.o init.o
-	$(OBJCOPY) -O binary -j .text -j .data shell.elf $@
+
+fibonacci.elf: fibonacci.c mmio.h init.o link.lds
+	$(CC) $(CFLAGS) -c -o fibonacci.o fibonacci.c
+	$(CROSS_COMPILE)ld -o fibonacci.elf -T link.lds $(LDFLAGS) fibonacci.o init.o
+
+bubblesort_data.h: bubblesort.dat
+	python3 -c 'import sys; print("int data[] = {" + ",".join(sys.stdin.read().split()) + "};")' < $< > $@
+
+bubblesort.o: bubblesort.c bubblesort_data.h
+
+bubblesort.elf: bubblesort.c bubblesort_data.h mmio.h init.o link.lds
+	$(CC) $(CFLAGS) -c -o bubblesort.o bubblesort.c
+	$(CROSS_COMPILE)ld -o bubblesort.elf -T link.lds $(LDFLAGS) bubblesort.o init.o
 
 init.o: init.S
 	$(AS) -R $(ASFLAGS) -o $@ $<
@@ -63,7 +81,7 @@ update: $(BINARIES)
 	@echo "Updated $(BINARIES) to ../src/main/resources"
 
 clean:
-	$(RM) *.o *.elf *.asmbin init_minimal.S nyancat-data.h
+	$(RM) *.o *.elf *.dump *.asmbin init_minimal.S nyancat-data.h
 
 # Convenience targets (prevent implicit rule interference)
 $(PROGRAMS): %: %.asmbin

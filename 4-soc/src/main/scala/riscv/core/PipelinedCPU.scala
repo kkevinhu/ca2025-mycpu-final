@@ -174,6 +174,7 @@ class PipelinedCPU extends Module {
   val ras_pred_target  = if2id.io.output_ras_predicted_target
   val ibtb_predicted   = if2id.io.output_ibtb_predicted_valid
   val ibtb_pred_target = if2id.io.output_ibtb_predicted_target
+  val perceptron_predicted = if2id.io.output_perceptron_predicted_taken
 
   // Actual branch resolution from ID stage
   val actual_taken      = id.io.if_jump_flag
@@ -328,6 +329,14 @@ class PipelinedCPU extends Module {
   inst_fetch.io.ibtb_update_rs1_hash := ibtb_rs1_hash
   inst_fetch.io.ibtb_update_target   := actual_target
 
+  // Perceptron predictor update: train on all conditional branches when they resolve
+  // Update with actual outcome to train the perceptron weights
+  val is_conditional_branch = id.io.ctrl_jump_instruction && !is_jal && !is_jalr
+  val perceptron_should_update = is_conditional_branch && !id.io.branch_hazard && !mem_stall
+  inst_fetch.io.perceptron_update_valid := perceptron_should_update
+  inst_fetch.io.perceptron_update_pc    := if2id.io.output_instruction_address
+  inst_fetch.io.perceptron_update_taken := actual_taken
+
   if2id.io.stall := ctrl.io.if_stall || mem_stall
   // Suppress IF2ID flush during mem_stall!
   //
@@ -368,6 +377,7 @@ class PipelinedCPU extends Module {
   if2id.io.ras_predicted_target  := inst_fetch.io.ras_predicted_target
   if2id.io.ibtb_predicted_valid  := inst_fetch.io.ibtb_predicted_valid
   if2id.io.ibtb_predicted_target := inst_fetch.io.ibtb_predicted_target
+  if2id.io.perceptron_predicted_taken := inst_fetch.io.perceptron_predicted_taken
 
   id.io.instruction               := if2id.io.output_instruction
   id.io.instruction_address       := if2id.io.output_instruction_address

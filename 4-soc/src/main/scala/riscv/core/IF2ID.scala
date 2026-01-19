@@ -35,6 +35,7 @@ class IF2ID extends Module {
     val ras_predicted_target  = Input(UInt(Parameters.AddrWidth)) // RAS predicted return address
     val ibtb_predicted_valid  = Input(Bool())                     // IndirectBTB prediction valid from IF
     val ibtb_predicted_target = Input(UInt(Parameters.AddrWidth)) // IndirectBTB predicted target
+    val perceptron_predicted_taken = Input(Bool())                // Perceptron prediction from IF stage
 
     val output_instruction           = Output(UInt(Parameters.DataWidth))
     val output_instruction_address   = Output(UInt(Parameters.AddrWidth))
@@ -45,6 +46,7 @@ class IF2ID extends Module {
     val output_ras_predicted_target  = Output(UInt(Parameters.AddrWidth)) // RAS target to ID stage
     val output_ibtb_predicted_valid  = Output(Bool())                     // IndirectBTB prediction to ID
     val output_ibtb_predicted_target = Output(UInt(Parameters.AddrWidth)) // IndirectBTB target to ID
+    val output_perceptron_predicted_taken = Output(Bool())                // Perceptron prediction to ID
   })
 
   val instruction = Module(new PipelineRegister(defaultValue = InstructionsNop.nop))
@@ -103,4 +105,11 @@ class IF2ID extends Module {
   ibtb_predicted_target.io.stall  := io.stall
   ibtb_predicted_target.io.flush  := io.flush
   io.output_ibtb_predicted_target := ibtb_predicted_target.io.out
+
+  // Perceptron prediction passed through pipeline
+  val perceptron_predicted_taken = Module(new PipelineRegister(1))
+  perceptron_predicted_taken.io.in     := io.perceptron_predicted_taken
+  perceptron_predicted_taken.io.stall  := io.stall
+  perceptron_predicted_taken.io.flush  := io.flush
+  io.output_perceptron_predicted_taken := perceptron_predicted_taken.io.out.asBool
 }

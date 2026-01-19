@@ -18,7 +18,7 @@ verilator:
 			exit 1; \
 		fi; \
 	fi
-	cd verilog/verilator && verilator --exe --cc sim.cpp Top.v \
+	cd verilog/verilator && verilator --exe --cc --trace sim.cpp Top.v \
 		-CFLAGS "$$(sdl2-config --cflags)" \
 		-LDFLAGS "$$(sdl2-config --libs)" && \
 		make -C obj_dir -f VTop.mk
@@ -35,6 +35,14 @@ sim: verilator
 	fi
 	@echo "🎮 Running simulation with $(BINARY)..."
 	cd verilog/verilator/obj_dir && ./VTop -i ../../../$(BINARY)
+
+sim_fib: verilator
+	$(MAKE) -C csrc fibonacci.asmbin
+	$(MAKE) sim BINARY=csrc/fibonacci.asmbin
+
+sim_bub: verilator
+	$(MAKE) -C csrc bubblesort.asmbin
+	$(MAKE) sim BINARY=csrc/bubblesort.asmbin
 
 check-vga: verilator
 	@echo "🔄 Building nyancat binary..."
@@ -108,4 +116,4 @@ clean:
 distclean: clean
 	$(RM) -r results
 
-.PHONY: verilator test indent sim check-vga check-uart shell compliance clean distclean
+.PHONY: verilator test indent sim sim_fib sim_bub check-vga check-uart shell compliance clean distclean
